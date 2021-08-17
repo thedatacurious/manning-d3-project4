@@ -1,10 +1,10 @@
 // const width = 1450;
 // const height = 1300;
 // const margin = {top: 100, left: 150};
-const innerCircleRadius = 390; // Inner radius of the visualization (where the group arcs are positioned)
-const outerCircleRadius = 400; // Outer radius of the visualization (including the flight time lines)
+const innerCircleRadius = 400; // Inner radius of the visualization (where the group arcs are positioned)
+const outerCircleRadius = 410; // Outer radius of the visualization (including the flight time lines)
 
-let groups = []
+let groups = [];
 
 // Set chart dimensions
 let dimensions = {
@@ -26,7 +26,8 @@ async function radialViz(){
   // Load data
 
   const dataset = await d3.csv('./data/astronauts_nasa_1959-2017.csv').then(d =>
-    {const aggreg = d3.flatGroup(d, grp => +grp.group, grp => +grp.year, grp => grp.group_name)
+    {
+     const aggreg = d3.flatGroup(d, grp => +grp.group, grp => +grp.year, grp => grp.group_name)
      aggreg.forEach(elem =>
        { const group = new Object();
          group['group'] = elem[0] || 'payload-specialist';
@@ -37,8 +38,6 @@ async function radialViz(){
        }
     )
   })
-
-  // console.log(groups[0].astronauts.length)
 
   const wrapper = d3.select('div#viz')
   .append('svg')
@@ -52,15 +51,10 @@ async function radialViz(){
   // Format data into required layout
 
   const cirLayout = d3.pie()
-  // .startAngle(-90 * Math.PI/180)
-  // .endAngle(-90 * Math.PI/180 + 2*Math.PI)
-  .padAngle(0.01)
   .value(d => d.astronauts.length)
   .sort(null);
 
   const groupFormatted = cirLayout(groups)
-
-
 
   // Create arc generator
 
@@ -69,10 +63,10 @@ async function radialViz(){
       .outerRadius(outerCircleRadius)
       .startAngle(d => d.startAngle)
       .endAngle(d => d.endAngle)
+      .padAngle(0.01)
       .cornerRadius(16);
 
-  console.log(groupFormatted[2])
-  console.log(arcGen(groupFormatted[2]))
+  console.log(groupFormatted)
 
   // Draw arc
 
@@ -84,6 +78,19 @@ async function radialViz(){
   .attr('d', arcGen)
   .attr('id', d => 'id-' + d.data.group)
   .style('fill', '#6794AD')
+
+
+bounds.selectAll(".arcLabel")
+    .data(groupFormatted)
+    .join("text")
+    .attr("class", "arcLabel")
+    .attr('dy', d => d.endAngle > 2 && d.endAngle < 5 ? -8 : 30)
+    .append("textPath")
+    .attr('startOffset', d => d.endAngle > 2 && d.endAngle < 5 ? '75%' : '25%')
+    .attr("text-anchor","middle")
+    .attr("xlink:href", (d,i) => "#id-"+ d.data.group)
+    .text(d => d.data.year == 0 ? 'Payload Specialists' : d.data.year)
+    .style('font-size','.9rem');
 
   // bounds
   // .selectAll('text')
