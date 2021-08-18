@@ -111,11 +111,12 @@ async function radialViz(){
   const scale_space_flight_total_hours = d3.scaleLinear().domain(domain_space_flight_total_hours).range([0,300])
   const scale_space_walks_total_hours = d3.scaleLinear().domain(domain_space_walks_total_hours).range([0,300])
 
-  console.log(fatalities);
+  // console.log(fatalities);
 
   groupFormatted.forEach((elem) => {
 
   let partition = (elem.endAngle-elem.startAngle-2*0.01)/elem.value;
+  function endRadius(d){return scale_space_flight_total_hours(+d.space_flight_total_hours) + outerCircleRadius;}
 
   let point = d3.arc()
         .innerRadius(outerCircleRadius)
@@ -125,13 +126,13 @@ async function radialViz(){
   .selectAll('line')
   .data(elem.data.astronauts)
   .join('line')
-  .attr('class',d => {
-    if (d.death_mission == 'Apollo 1' ){return 'apollo';}
-    if (d.death_mission == 'STS-107 (Columbia)' ){return 'colombia';}
-    if (d.death_mission == 'STS 51-L (Challenger)' ){return 'challenger';}
-    return
-  }
-  )
+  // .attr('class',d => {
+  //   if (d.death_mission == 'Apollo 1' ){return 'apollo';}
+  //   if (d.death_mission == 'STS-107 (Columbia)' ){return 'colombia';}
+  //   if (d.death_mission == 'STS 51-L (Challenger)' ){return 'challenger';}
+  //   return
+  // }
+  // )
   .attr('x1', (d,i) =>
    point.startAngle(elem.startAngle+0.01+partition*i)
            .endAngle(elem.startAngle+0.01+partition*(i+1))
@@ -143,15 +144,15 @@ async function radialViz(){
            .centroid(d)[1]
 )
 .attr('x2', (d,i) =>
-  point.innerRadius(scale_space_flight_total_hours(+d.space_flight_total_hours) + outerCircleRadius)
-           .outerRadius(scale_space_flight_total_hours(+d.space_flight_total_hours) + outerCircleRadius)
+  point.innerRadius(endRadius(d))
+           .outerRadius(endRadius(d))
            .startAngle(elem.startAngle+0.01+partition* i)
            .endAngle(elem.startAngle+0.01+partition*(i+1))
            .centroid(d)[0]
 )
 .attr('y2', (d,i) =>
-  point.innerRadius(scale_space_flight_total_hours(+d.space_flight_total_hours) + outerCircleRadius)
-           .outerRadius(scale_space_flight_total_hours(+d.space_flight_total_hours) + outerCircleRadius)
+  point.innerRadius(endRadius(d))
+           .outerRadius(endRadius(d))
            .startAngle(elem.startAngle+0.01+partition * i)
            .endAngle(elem.startAngle+0.01+partition*(i+1))
            .centroid(d)[1]
@@ -163,15 +164,15 @@ bounds.select(`.group-${elem.data.group}`)
 .data(elem.data.astronauts)
 .join('circle')
 .attr('cx', (d,i) =>
-point.innerRadius(scale_space_flight_total_hours(+d.space_flight_total_hours) + outerCircleRadius)
-         .outerRadius(scale_space_flight_total_hours(+d.space_flight_total_hours) + outerCircleRadius)
+point.innerRadius(endRadius(d))
+         .outerRadius(endRadius(d))
          .startAngle(elem.startAngle+0.01+partition* i)
          .endAngle(elem.startAngle+0.01+partition*(i+1))
          .centroid(d)[0]
 )
 .attr('cy', (d,i) =>
-point.innerRadius(scale_space_flight_total_hours(+d.space_flight_total_hours) + outerCircleRadius)
-         .outerRadius(scale_space_flight_total_hours(+d.space_flight_total_hours) + outerCircleRadius)
+point.innerRadius(endRadius(d))
+         .outerRadius(endRadius(d))
          .startAngle(elem.startAngle+0.01+partition * i)
          .endAngle(elem.startAngle+0.01+partition*(i+1))
          .centroid(d)[1]
@@ -179,17 +180,41 @@ point.innerRadius(scale_space_flight_total_hours(+d.space_flight_total_hours) + 
 .attr('r', d => Math.sqrt(scale_space_walks_total_hours(+d.space_walks_total_hours)))
 .style('fill', d => d.military_force.length > 0 ? 'rgba(194, 168, 62, 0.35)' : 'rgba(113, 132, 147, 0.35)')
 
+// console.log(elem)
+
+  elem.data.astronauts.forEach((astronaut,i) => { // loop through each astronaut
+    if (astronaut.death_mission != ''){
+      console.log(astronaut.group)
+      // if there is an astronaut in the group who died during mission, append the star
+      bounds.select(`.group-${elem.data.group}`)
+      .insert('image')
+      .attr('xlink:href', d =>
+      {if (astronaut.death_mission == 'Apollo 1' ){return 'assets/star_yellow.svg';}
+      if (astronaut.death_mission == 'STS-107 (Columbia)' ){return 'assets/star_red.svg';}
+      if (astronaut.death_mission == 'STS 51-L (Challenger)' ){return 'assets/star_green.svg';}
+    })
+      .attr('width', '15px')
+      .attr('height', '15px')
+      .attr('x', d => // d now refers to the group
+      {let selected = d.data.astronauts[i];
+        return point.innerRadius(endRadius(selected)+50)
+                   .outerRadius(endRadius(selected)+50)
+                   .startAngle(d.startAngle+0.01+partition* i)
+                   .endAngle(d.startAngle+0.01+partition*(i+1))
+                   .centroid(selected)[0]
+      })
+      .attr('y', d =>
+      {let selected = d.data.astronauts[i];
+        return point.innerRadius(endRadius(selected)+50)
+                       .outerRadius(endRadius(selected)+50)
+                       .startAngle(d.startAngle+0.01+partition * i)
+                       .endAngle(d.startAngle+0.01+partition*(i+1))
+                       .centroid(selected)[1];
+      })
+    }
+  })
+
 })
-
-
-
-
-
-
-
-
-
-
 
 }
 
