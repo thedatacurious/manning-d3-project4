@@ -6,16 +6,18 @@ const outerCircleRadius = 410; // Outer radius of the visualization (including t
 
 let groups = [];
 let domain_space_flight_total_hours = [];
+let domain_space_walks_total_hours = [];
+let fatalities = [];
 
 // Set chart dimensions
 let dimensions = {
   width: 1450,
   height: 1300,
   margin: {
-    top: 150,
+    top: 100,
     right: 100,
     bottom: 0,
-    left: 200,
+    left: 300,
   },
 }
 
@@ -27,7 +29,10 @@ async function radialViz(){
   // Load data
 
   const dataset = await d3.csv('./data/astronauts_nasa_1959-2017.csv').then(d =>
-    {domain_space_flight_total_hours = d3.extent(d.map(d => +d.space_flight_total_hours))
+    {domain_space_flight_total_hours = d3.extent(d.map(d => +d.space_flight_total_hours));
+     domain_space_walks_total_hours = d3.extent(d.map(d => +d.space_walks_total_hours));
+
+     fatalities = d.filter(d => d.death_mission != '');
 
      const aggreg = d3.flatGroup(d, grp => +grp.group, grp => +grp.year, grp => grp.group_name)
      aggreg.forEach(elem =>
@@ -79,7 +84,7 @@ async function radialViz(){
   .append('path')
   .attr('d', arcGen)
   .attr('id', d => 'id-' + d.data.group)
-  .style('fill', '#6794AD')
+  .style('fill', '#92AEC9')
 
   bounds.selectAll('.group')
     .data(groupFormatted)
@@ -104,6 +109,9 @@ async function radialViz(){
 
   // Create scales
   const scale_space_flight_total_hours = d3.scaleLinear().domain(domain_space_flight_total_hours).range([0,300])
+  const scale_space_walks_total_hours = d3.scaleLinear().domain(domain_space_walks_total_hours).range([0,300])
+
+  console.log(fatalities);
 
   groupFormatted.forEach((elem) => {
 
@@ -113,12 +121,17 @@ async function radialViz(){
         .innerRadius(outerCircleRadius)
         .outerRadius(outerCircleRadius)
 
-  console.log(elem)
-
   bounds.select(`.group-${elem.data.group}`)
   .selectAll('line')
   .data(elem.data.astronauts)
   .join('line')
+  .attr('class',d => {
+    if (d.death_mission == 'Apollo 1' ){return 'apollo';}
+    if (d.death_mission == 'STS-107 (Columbia)' ){return 'colombia';}
+    if (d.death_mission == 'STS 51-L (Challenger)' ){return 'challenger';}
+    return
+  }
+  )
   .attr('x1', (d,i) =>
    point.startAngle(elem.startAngle+0.01+partition*i)
            .endAngle(elem.startAngle+0.01+partition*(i+1))
@@ -143,11 +156,30 @@ async function radialViz(){
            .endAngle(elem.startAngle+0.01+partition*(i+1))
            .centroid(d)[1]
 )
-.style('stroke', d => d.military_force.length > 0 ? '#C2A83E' : '#718493')
+.style('stroke', d => d.military_force.length > 0 ? '#C2A83E' : '#718493');
 
+bounds.select(`.group-${elem.data.group}`)
+.selectAll('circle')
+.data(elem.data.astronauts)
+.join('circle')
+.attr('cx', (d,i) =>
+point.innerRadius(scale_space_flight_total_hours(+d.space_flight_total_hours) + outerCircleRadius)
+         .outerRadius(scale_space_flight_total_hours(+d.space_flight_total_hours) + outerCircleRadius)
+         .startAngle(elem.startAngle+0.01+partition* i)
+         .endAngle(elem.startAngle+0.01+partition*(i+1))
+         .centroid(d)[0]
+)
+.attr('cy', (d,i) =>
+point.innerRadius(scale_space_flight_total_hours(+d.space_flight_total_hours) + outerCircleRadius)
+         .outerRadius(scale_space_flight_total_hours(+d.space_flight_total_hours) + outerCircleRadius)
+         .startAngle(elem.startAngle+0.01+partition * i)
+         .endAngle(elem.startAngle+0.01+partition*(i+1))
+         .centroid(d)[1]
+)
+.attr('r', d => Math.sqrt(scale_space_walks_total_hours(+d.space_walks_total_hours)))
+.style('fill', d => d.military_force.length > 0 ? 'rgba(194, 168, 62, 0.35)' : 'rgba(113, 132, 147, 0.35)')
 
 })
-
 
 
 
