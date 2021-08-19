@@ -217,7 +217,13 @@ point.innerRadius(endRadius(d))
 
 })
 
+// Create legends
+
+// console.log(domain_space_flight_total_hours)
 flightTime = [500, 5000, 10000]
+// console.log(domain_space_walks_total_hours)
+spaceWalk = [20,40,60]
+
 const flightLegend = d3.select('div.flight-time')
 
 const flightEntries = flightLegend
@@ -228,12 +234,10 @@ const flightEntries = flightLegend
 
 flightEntries
 .append('text')
-.text(d => d3.format(',')(d) + ' hours')
+.text(d => d3.format(',')(d) + 'h')
 .attr('x', d => 10+scale_space_flight_total_hours(d))
 .attr('y', (d,i) => 30+25*i)
 .attr('class','legend')
-
-
 
 flightEntries
 .append('line')
@@ -243,12 +247,27 @@ flightEntries
 .attr('y2',(d,i) => 30+25*i)
 .style('stroke', '#718493')
 
+const walkLegend = d3.select('div.time-in-spacewalk')
 
+const walkEntries = walkLegend
+.append('svg')
+.selectAll('g')
+.data(spaceWalk)
+.join('g')
 
+walkEntries
+.append('text')
+.text(d => d + 'h')
+.attr('x',  45)
+.attr('y', (d,i) => 15+20*i + (i+1)*Math.sqrt(scale_space_walks_total_hours(d)))
+.attr('class','legend')
 
-
-
-console.log(domain_space_flight_total_hours)
+walkEntries
+.append('circle')
+.attr('cx', 20)
+.attr('cy', (d,i) => 10+20*i + (i+1)*Math.sqrt(scale_space_walks_total_hours(d)))
+.attr('r', d => Math.sqrt(scale_space_walks_total_hours(d)))
+.style('fill', 'rgba(113, 132, 147, 0.35)')
 
 }
 
