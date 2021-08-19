@@ -157,6 +157,7 @@ async function radialViz(){
            .endAngle(elem.startAngle+0.01+partition*(i+1))
            .centroid(d)[1]
 )
+// .style('stroke-width', 2)
 .style('stroke', d => d.military_force.length > 0 ? '#C2A83E' : '#718493');
 
 bounds.select(`.group-${elem.data.group}`)
@@ -215,6 +216,39 @@ point.innerRadius(endRadius(d))
   })
 
 })
+
+flightTime = [500, 5000, 10000]
+const flightLegend = d3.select('div.flight-time')
+
+const flightEntries = flightLegend
+.append('svg')
+.selectAll('g')
+.data(flightTime)
+.join('g')
+
+flightEntries
+.append('text')
+.text(d => d3.format(',')(d) + ' hours')
+.attr('x', d => 10+scale_space_flight_total_hours(d))
+.attr('y', (d,i) => 30+25*i)
+.attr('class','legend')
+
+
+
+flightEntries
+.append('line')
+.attr('x1', 0)
+.attr('y1', (d,i) => 30+25*i)
+.attr('x2', d => scale_space_flight_total_hours(d))
+.attr('y2',(d,i) => 30+25*i)
+.style('stroke', '#718493')
+
+
+
+
+
+
+console.log(domain_space_flight_total_hours)
 
 }
 

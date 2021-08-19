@@ -64,6 +64,12 @@ a {
 }
 
 /* Legend */
+
+text.legend{
+    font-family: 'Oxygen', sans-serif;
+    font-size: .9rem;
+}
+
 .legend-section.cohort,
 .legend-section.stats {
   height: 130px;
