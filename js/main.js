@@ -8,6 +8,7 @@ let groups = [];
 let domain_space_flight_total_hours = [];
 let domain_space_walks_total_hours = [];
 let fatalities = [];
+ let originalStarCoord = []; // array for storing star coordinates for later
 
 // Set chart dimensions
 let dimensions = {
@@ -202,22 +203,21 @@ bounds.select(`.group-${elem.data.group}`)
       .attr('width', '15px')
       .attr('height', '15px')
       .attr('x', d => // d now refers to the group
-      {let selected = d.data.astronauts[i];
-        groups[index].astronauts[i]['xStar'] = point.innerRadius(endRadius(selected)+50)
-                   .outerRadius(endRadius(selected)+50)
-                   .startAngle(d.startAngle+0.01+partition* i)
-                   .endAngle(d.startAngle+0.01+partition*(i+1))
-                   .centroid(selected)[0];
-        return groups[index].astronauts[i]['xStar'];
+      {
+        let selectedAstronaut = d.data.astronauts[i];
+        const star = { id: selectedAstronaut.id,
+                  coord : point.innerRadius(endRadius(selectedAstronaut)+50)
+                  .outerRadius(endRadius(selectedAstronaut)+50)
+                  .startAngle(d.startAngle+0.01+partition* i)
+                  .endAngle(d.startAngle+0.01+partition*(i+1))
+                  .centroid(selectedAstronaut)
+                };
+       originalStarCoord.push(star);
+       return star.coord[0];
       })
       .attr('y', d =>
-      {let selected = d.data.astronauts[i];
-        groups[index].astronauts[i]['yStar'] = point.innerRadius(endRadius(selected)+50)
-                   .outerRadius(endRadius(selected)+50)
-                   .startAngle(d.startAngle+0.01+partition* i)
-                   .endAngle(d.startAngle+0.01+partition*(i+1))
-                   .centroid(selected)[1];
-        return groups[index].astronauts[i]['yStar'];
+      {let selectedAstronaut = d.data.astronauts[i];
+        return originalStarCoord.filter(d => d.id == selectedAstronaut.id)[0].coord[1];
       })
     }
   })
@@ -285,7 +285,7 @@ function smoothTransition(){return d3.transition().duration(500).delay(50).ease(
 //// Create line generator
 const lineGen = d3.line();
 const yStart = -outerCircleRadius;
-const x = outerCircleRadius*1.3;
+const x = outerCircleRadius*1.4;
 let initialPosition = [[x,yStart],[x,yStart]];
 
 
@@ -326,16 +326,23 @@ function openAstronautsList(e,d){
     return year + ' ' + nickname
   }
     )
+
+  let groupIndex = 0;
+  let newStarYcoord = [];
+
   //// Apply transformation to astronaut lines indicating flight time
   d3.select('g.is-open')
   .selectAll('line')
   .transition(smoothTransition())
   .attr('x1', x + 5)
-  .attr('y1', (d,i) => 15+yStart + i*30)
+  .attr('y1', (d,i) => {
+    if (d.death_mission != ''){
+      newStarYcoord.push(15 + yStart + i*30);
+    }
+    return 15 + yStart + i*30})
   .attr('x2', (d,i) =>  x + 5 + scale_space_flight_total_hours(+d.space_flight_total_hours))
   .attr('y2', (d,i) => 15+yStart + i*30)
 
-  let groupIndex = 0;
 
   //// Apply transformation to astronaut circles indicating spacewalk time
   d3.select('g.is-open')
@@ -352,10 +359,11 @@ function openAstronautsList(e,d){
 
 
   //// Apply transformation to astronaut stars indicating those who died during missions
-  d3.select('g.is-open')
+  d3.select('.is-open')
   .selectAll('image')
-    .attr('x', () => x + 15 + scale_space_flight_total_hours(+d.space_flight_total_hours))
-    .attr('y', () => 15 + yStart + i*30)
+    .transition(smoothTransition())
+    .attr('x', () => x - 20)
+    .attr('y', (d,i) => newStarYcoord[i])
 
   // .transition(smoothTransition())
 
@@ -383,33 +391,39 @@ function closeAstronautsList(){
     .text(d => d.data.year == 0 ? 'Payload Specialists' : d.data.year);
 
     let groupIndex = 0;
-    let astronautIndex = [];
+    let astroId = []; // empty array for storing ids of selected astronauts who died during mission
 
     //// Revert transformation for astronaut circles indicating spacewalk time
     d3.select('.is-open')
     .selectAll('line')
     .transition(smoothTransition())
     .attr('x1', (d,i) => {
-      groupIndex = d.group == 'payload_specialist' ? 23-1 : +d.group-1;    //in most cases, +d.group-1 gives the index of groups array
-      return groups[groupIndex].astronauts[i]['x1']; //for payload specialist, the index is 22
+      if (d.death_mission != ''){astroId.push(d.id);}                                                                 //in most cases, +d.group-1 gives the index of groups array
+      groupIndex = d.group == 'payload_specialist' ? 23-1 : +d.group-1; //for payload specialist, the index is 22
+      return groups[groupIndex].astronauts[i]['x1'];
   })
     .attr('y1', (d,i) => groups[groupIndex].astronauts[i]['y1'])
     .attr('x2', (d,i) => groups[groupIndex].astronauts[i]['x2'])
     .attr('y2', (d,i) => groups[groupIndex].astronauts[i]['y2'])
 
-    d3.select('g.is-open')
+    d3.select('.is-open')
     .selectAll('circle')
     .transition(smoothTransition())
     .attr('cx', (d,i) => groups[groupIndex].astronauts[i]['x2'])
     .attr('cy', (d,i) => groups[groupIndex].astronauts[i]['y2'])
 
+
+    //// Get filtered version of star coord array
+    let filteredStarCoord = originalStarCoord.filter(elem => astroId.includes(elem.id))
+    console.log(filteredStarCoord)
+
+
     //// Revert transformation for astronaut stars indicating those who died during missions
-    // d3.select('g.is-open')
-    // .selectAll('image')
-    //   .attr('x', (d,i) => {console.log(groups[groupIndex].astronauts)
-    //    return groups[groupIndex].astronauts[astronautIndex]['xStar']})
-    //   .attr('y', (d,i) => {
-    //    return groups[groupIndex].astronauts[astronautIndex]['yStar']})
+    d3.select('g.is-open')
+    .selectAll('image')
+      .transition(smoothTransition())
+      .attr('x', (d,i) => filteredStarCoord[i].coord[0])
+      .attr('y', (d,i) => filteredStarCoord[i].coord[1])
 
     d3.select('.is-open')
     .classed('is-open',false);
