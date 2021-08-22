@@ -37,7 +37,7 @@ async function radialViz(){
      const aggreg = d3.flatGroup(d, grp => +grp.group, grp => +grp.year, grp => grp.group_name)
      aggreg.forEach(elem =>
        { const group = new Object();
-         group['group'] = elem[0] || 'payload-specialist';
+         group['group'] = elem[0] || 23;
          group['year'] = elem[1];
          group['group_name'] = elem[2];
          group['astronauts'] = elem[3];
@@ -91,10 +91,12 @@ async function radialViz(){
     .join('.group')
     .append("text")
     .attr('dy', d => d.endAngle > 2 && d.endAngle < 5 ? -8 : 30)
+    // .attr('class', d => 'group-' + d.data.group)
     .append("textPath")
     .attr('startOffset', d => d.endAngle > 2 && d.endAngle < 5 ? '75%' : '25%')
     .attr("text-anchor","middle")
     .attr("xlink:href", (d,i) => "#id-"+ d.data.group)
+    // .attr('class', d => 'group-' + d.data.group)
     .text(d => d.data.year == 0 ? 'Payload Specialists' : d.data.year)
     .style('font-size','.9rem');
 
@@ -113,7 +115,7 @@ async function radialViz(){
 
   // console.log(fatalities);
 
-  groupFormatted.forEach((elem) => {
+  groupFormatted.forEach((elem, index) => {
 
   let partition = (elem.endAngle-elem.startAngle-2*0.01)/elem.value;
   function endRadius(d){return scale_space_flight_total_hours(+d.space_flight_total_hours) + outerCircleRadius;}
@@ -122,7 +124,11 @@ async function radialViz(){
         .innerRadius(outerCircleRadius)
         .outerRadius(outerCircleRadius)
 
+
+
   bounds.select(`.group-${elem.data.group}`)
+  // .append('g')
+  // .attr('class', `line-${elem.data.group}`)
   .selectAll('line')
   .data(elem.data.astronauts)
   .join('line')
@@ -133,29 +139,37 @@ async function radialViz(){
   //   return
   // }
   // )
-  .attr('x1', (d,i) =>
-   point.startAngle(elem.startAngle+0.01+partition*i)
-           .endAngle(elem.startAngle+0.01+partition*(i+1))
-           .centroid(d)[0]
+  .attr('x1', (d,i) =>{
+    groups[index].astronauts[i]['x1'] = point.startAngle(elem.startAngle+0.01+partition * i)
+            .endAngle(elem.startAngle+0.01+partition*(i+1))
+            .centroid(d)[0];
+   return groups[index].astronauts[i]['x1'];
+  }
 )
-  .attr('y1', (d,i) =>
-   point.startAngle(elem.startAngle+0.01+partition * i)
-           .endAngle(elem.startAngle+0.01+partition*(i+1))
-           .centroid(d)[1]
+  .attr('y1', (d,i) =>{
+   groups[index].astronauts[i]['y1'] = point.startAngle(elem.startAngle+0.01+partition * i)
+             .endAngle(elem.startAngle+0.01+partition*(i+1))
+             .centroid(d)[1];
+   return groups[index].astronauts[i]['y1'];
+  }
 )
-.attr('x2', (d,i) =>
-  point.innerRadius(endRadius(d))
+.attr('x2', (d,i) =>{
+  groups[index].astronauts[i]['x2'] = point.innerRadius(endRadius(d))
            .outerRadius(endRadius(d))
            .startAngle(elem.startAngle+0.01+partition* i)
            .endAngle(elem.startAngle+0.01+partition*(i+1))
-           .centroid(d)[0]
+           .centroid(d)[0];
+  return groups[index].astronauts[i]['x2'];
+  }
 )
-.attr('y2', (d,i) =>
-  point.innerRadius(endRadius(d))
+.attr('y2', (d,i) => {
+  groups[index].astronauts[i]['y2'] = point.innerRadius(endRadius(d))
            .outerRadius(endRadius(d))
            .startAngle(elem.startAngle+0.01+partition * i)
            .endAngle(elem.startAngle+0.01+partition*(i+1))
-           .centroid(d)[1]
+           .centroid(d)[1];
+  return groups[index].astronauts[i]['y2'];
+  }
 )
 // .style('stroke-width', 2)
 .style('stroke', d => d.military_force.length > 0 ? '#C2A83E' : '#718493');
@@ -164,28 +178,19 @@ bounds.select(`.group-${elem.data.group}`)
 .selectAll('circle')
 .data(elem.data.astronauts)
 .join('circle')
-.attr('cx', (d,i) =>
-point.innerRadius(endRadius(d))
-         .outerRadius(endRadius(d))
-         .startAngle(elem.startAngle+0.01+partition* i)
-         .endAngle(elem.startAngle+0.01+partition*(i+1))
-         .centroid(d)[0]
+.attr('cx', (d,i) => groups[index].astronauts[i]['x2'])
+.attr('cy', (d,i) => groups[index].astronauts[i]['y2'])
+.attr('r', (d,i) => {
+  groups[index].astronauts[i]['radius'] = Math.sqrt(scale_space_walks_total_hours(+d.space_walks_total_hours));
+  return groups[index].astronauts[i]['radius'];
+  }
 )
-.attr('cy', (d,i) =>
-point.innerRadius(endRadius(d))
-         .outerRadius(endRadius(d))
-         .startAngle(elem.startAngle+0.01+partition * i)
-         .endAngle(elem.startAngle+0.01+partition*(i+1))
-         .centroid(d)[1]
-)
-.attr('r', d => Math.sqrt(scale_space_walks_total_hours(+d.space_walks_total_hours)))
 .style('fill', d => d.military_force.length > 0 ? 'rgba(194, 168, 62, 0.35)' : 'rgba(113, 132, 147, 0.35)')
 
 // console.log(elem)
 
   elem.data.astronauts.forEach((astronaut,i) => { // loop through each astronaut
     if (astronaut.death_mission != ''){
-      console.log(astronaut.group)
       // if there is an astronaut in the group who died during mission, append the star
       bounds.select(`.group-${elem.data.group}`)
       .insert('image')
@@ -198,19 +203,21 @@ point.innerRadius(endRadius(d))
       .attr('height', '15px')
       .attr('x', d => // d now refers to the group
       {let selected = d.data.astronauts[i];
-        return point.innerRadius(endRadius(selected)+50)
+        groups[index].astronauts[i]['xStar'] = point.innerRadius(endRadius(selected)+50)
                    .outerRadius(endRadius(selected)+50)
                    .startAngle(d.startAngle+0.01+partition* i)
                    .endAngle(d.startAngle+0.01+partition*(i+1))
-                   .centroid(selected)[0]
+                   .centroid(selected)[0];
+        return groups[index].astronauts[i]['xStar'];
       })
       .attr('y', d =>
       {let selected = d.data.astronauts[i];
-        return point.innerRadius(endRadius(selected)+50)
-                       .outerRadius(endRadius(selected)+50)
-                       .startAngle(d.startAngle+0.01+partition * i)
-                       .endAngle(d.startAngle+0.01+partition*(i+1))
-                       .centroid(selected)[1];
+        groups[index].astronauts[i]['yStar'] = point.innerRadius(endRadius(selected)+50)
+                   .outerRadius(endRadius(selected)+50)
+                   .startAngle(d.startAngle+0.01+partition* i)
+                   .endAngle(d.startAngle+0.01+partition*(i+1))
+                   .centroid(selected)[1];
+        return groups[index].astronauts[i]['yStar'];
       })
     }
   })
@@ -269,6 +276,131 @@ walkEntries
 .attr('r', d => Math.sqrt(scale_space_walks_total_hours(d)))
 .style('fill', 'rgba(113, 132, 147, 0.35)')
 
+// Add interactions
+
+function smoothTransition(){return d3.transition().duration(500).delay(50).ease(d3.easeCubicOut);}
+
+// console.log(d3.min(groupFormatted.map(d => d.value)))
+
+//// Create line generator
+const lineGen = d3.line();
+const yStart = -outerCircleRadius;
+const x = outerCircleRadius*1.3;
+let initialPosition = [[x,yStart],[x,yStart]];
+
+
+function openAstronautsList(e,d){
+  closeAstronautsList();
+
+  d3.select(`.group-${d.data.group}`)
+  .classed('is-open',true);
+
+  //// Transform group arc into vertical line
+  let arcLength = d3.max([30 * d.value, 120]) //(+d.endAngle - +d.startAngle)/(2*Math.PI)*(2*Math.PI*outerCircleRadius)
+  const yEnd = arcLength-outerCircleRadius;
+  let nextPosition = [[x,yStart],[x,yEnd]];
+
+  //// Apply transformation to arc
+  d3.select('.is-open')
+  .select('path') //#id-${d.data.group}`)
+  .attr('d', lineGen(initialPosition))
+  .transition(smoothTransition())
+  .attr('d', lineGen(nextPosition))
+  .style('stroke', '#92AEC9')
+  .style('stroke-width', '5')
+
+  //// Apply transformation to year label
+  d3.select('.is-open')
+  .select('text') //.group-${d.data.group}`)
+  .attr('dy', 30)
+  .select('textPath') //.group-${d.data.group}`)
+  .attr('startOffset', '0%')
+  .attr("text-anchor","start")
+  .text(d => {
+    let year = d.data.year == 0 ? '' : d.data.year
+    let nickname = d.data.group_name
+    return year + ' ' + nickname
+  }
+    )
+  //// Apply transformation to astronaut lines and circles
+  d3.select('g.is-open')
+  .selectAll('line')
+  .transition(smoothTransition())
+  .attr('x1', x + 5)
+  .attr('y1', (d,i) => 15+yStart + i*30)
+  .attr('x2', (d,i) =>  x + 5 + scale_space_flight_total_hours(+d.space_flight_total_hours))
+  .attr('y2', (d,i) => 15+yStart + i*30)
+
+  d3.select('g.is-open')
+  .selectAll('circle')
+  .transition(smoothTransition())
+  .attr('cx', (d,i) =>  x + 5 + scale_space_flight_total_hours(+d.space_flight_total_hours))
+  .attr('cy', (d,i) => 15+yStart + i*30)
+  .attr('r', (d,i) =>  groups[+d.group-1].astronauts[i]['radius']
+  )
+  .style('fill', d => d.military_force.length > 0 ? 'rgba(194, 168, 62, 0.35)' : 'rgba(113, 132, 147, 0.35)')
+
+
+  // .transition(smoothTransition())
+
+
+  d3.select('button.close')
+  .style('transform', `translate(${outerCircleRadius*3}px,${dimensions.margin.top}px)`)
+  .style('opacity', 1);
 }
+
+
+function closeAstronautsList(){
+    d3.select('button.close')
+    .style('opacity', 0);
+
+    d3.select('.is-open')
+    .select('path')
+    .attr('d', lineGen(initialPosition))
+    .attr('d', arcGen)
+    .style('stroke-width','1')
+
+    d3.select('.is-open')
+    .select('text')
+    .attr('dy', d => d.endAngle > 2 && d.endAngle < 5 ? -8 : 30)
+    .select('textPath')
+    .attr('startOffset', d => d.endAngle > 2 && d.endAngle < 5 ? '75%' : '25%')
+    .attr("text-anchor","middle")
+    .text(d => d.data.year == 0 ? 'Payload Specialists' : d.data.year);
+
+
+    d3.select('g.is-open')
+    .selectAll('line')
+    .transition(smoothTransition())
+    .attr('x1', (d,i) => groups[d.group == 'payload_specialist' ? 23-1 : +d.group-1].astronauts[i]['x1']) //in most cases, +d.group-1 gives the index of groups array
+    .attr('y1', (d,i) => groups[d.group == 'payload_specialist' ? 23-1 : +d.group-1].astronauts[i]['y1']) //for payload specialist, the index is 22
+    .attr('x2', (d,i) => groups[d.group == 'payload_specialist' ? 23-1 : +d.group-1].astronauts[i]['x2'])
+    .attr('y2', (d,i) => groups[d.group == 'payload_specialist' ? 23-1 : +d.group-1].astronauts[i]['y2'])
+
+    d3.select('g.is-open')
+    .selectAll('circle')
+    .transition(smoothTransition())
+    .attr('cx', (d,i) => groups[d.group == 'payload_specialist' ? 23-1 : +d.group-1].astronauts[i]['x2'])
+    .attr('cy', (d,i) => groups[d.group == 'payload_specialist' ? 23-1 : +d.group-1].astronauts[i]['y2'])
+
+
+    d3.select('.is-open')
+    .classed('is-open',false);
+
+
+
+
+
+}
+
+d3.selectAll('.group').on('click', openAstronautsList)
+
+d3.select('button.close').on('click', closeAstronautsList)
+
+
+
+}
+
+
 
 radialViz();

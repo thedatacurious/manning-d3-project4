@@ -46,6 +46,10 @@ a {
   position: relative;
 }
 
+.group {
+  cursor: pointer;
+}
+
 /* Infobox close button */
 #astronauts-list .close {
   position: absolute;

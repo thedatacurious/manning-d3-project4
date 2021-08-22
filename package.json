@@ -1,0 +1,5 @@
+{
+  "dependencies": {
+    "d3-transition": "^3.0.1"
+  }
+}
