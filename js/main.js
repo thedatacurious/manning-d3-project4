@@ -292,6 +292,10 @@ let initialPosition = [[x,yStart],[x,yStart]];
 function openAstronautsList(e,d){
   closeAstronautsList();
 
+  d3.select('button.close')
+  .style('transform', `translate(${dimensions.boundedWidth+5}px,${dimensions.margin.top}px)`)
+  .style('opacity', 1);
+
   d3.select(`.group-${d.data.group}`)
   .classed('is-open',true);
 
@@ -309,7 +313,7 @@ function openAstronautsList(e,d){
   .style('stroke', '#92AEC9')
   .style('stroke-width', '5')
 
-  //// Apply transformation to year label
+  //// Apply transformation to arc label
   d3.select('.is-open')
   .select('text') //.group-${d.data.group}`)
   .attr('dy', 30)
@@ -322,7 +326,7 @@ function openAstronautsList(e,d){
     return year + ' ' + nickname
   }
     )
-  //// Apply transformation to astronaut lines and circles
+  //// Apply transformation to astronaut lines indicating flight time
   d3.select('g.is-open')
   .selectAll('line')
   .transition(smoothTransition())
@@ -331,22 +335,30 @@ function openAstronautsList(e,d){
   .attr('x2', (d,i) =>  x + 5 + scale_space_flight_total_hours(+d.space_flight_total_hours))
   .attr('y2', (d,i) => 15+yStart + i*30)
 
+  let groupIndex = 0;
+
+  //// Apply transformation to astronaut circles indicating spacewalk time
   d3.select('g.is-open')
   .selectAll('circle')
   .transition(smoothTransition())
   .attr('cx', (d,i) =>  x + 5 + scale_space_flight_total_hours(+d.space_flight_total_hours))
-  .attr('cy', (d,i) => 15+yStart + i*30)
-  .attr('r', (d,i) =>  groups[+d.group-1].astronauts[i]['radius']
+  .attr('cy', (d,i) => 15 + yStart + i*30)
+  .attr('r', (d,i) =>  {
+    groupIndex = d.group == 'payload_specialist' ? 23-1 : +d.group-1;
+    return groups[groupIndex].astronauts[i]['radius'];
+  }
   )
   .style('fill', d => d.military_force.length > 0 ? 'rgba(194, 168, 62, 0.35)' : 'rgba(113, 132, 147, 0.35)')
 
 
+  //// Apply transformation to astronaut stars indicating those who died during missions
+  d3.select('g.is-open')
+  .selectAll('image')
+    .attr('x', () => x + 15 + scale_space_flight_total_hours(+d.space_flight_total_hours))
+    .attr('y', () => 15 + yStart + i*30)
+
   // .transition(smoothTransition())
 
-
-  d3.select('button.close')
-  .style('transform', `translate(${outerCircleRadius*3}px,${dimensions.margin.top}px)`)
-  .style('opacity', 1);
 }
 
 
@@ -354,12 +366,14 @@ function closeAstronautsList(){
     d3.select('button.close')
     .style('opacity', 0);
 
+    //// Revert transformation for arc
     d3.select('.is-open')
     .select('path')
     .attr('d', lineGen(initialPosition))
     .attr('d', arcGen)
     .style('stroke-width','1')
 
+    //// Revert transformation for astronaut lines indicating flight time
     d3.select('.is-open')
     .select('text')
     .attr('dy', d => d.endAngle > 2 && d.endAngle < 5 ? -8 : 30)
@@ -368,21 +382,34 @@ function closeAstronautsList(){
     .attr("text-anchor","middle")
     .text(d => d.data.year == 0 ? 'Payload Specialists' : d.data.year);
 
+    let groupIndex = 0;
+    let astronautIndex = [];
 
-    d3.select('g.is-open')
+    //// Revert transformation for astronaut circles indicating spacewalk time
+    d3.select('.is-open')
     .selectAll('line')
     .transition(smoothTransition())
-    .attr('x1', (d,i) => groups[d.group == 'payload_specialist' ? 23-1 : +d.group-1].astronauts[i]['x1']) //in most cases, +d.group-1 gives the index of groups array
-    .attr('y1', (d,i) => groups[d.group == 'payload_specialist' ? 23-1 : +d.group-1].astronauts[i]['y1']) //for payload specialist, the index is 22
-    .attr('x2', (d,i) => groups[d.group == 'payload_specialist' ? 23-1 : +d.group-1].astronauts[i]['x2'])
-    .attr('y2', (d,i) => groups[d.group == 'payload_specialist' ? 23-1 : +d.group-1].astronauts[i]['y2'])
+    .attr('x1', (d,i) => {
+      groupIndex = d.group == 'payload_specialist' ? 23-1 : +d.group-1;    //in most cases, +d.group-1 gives the index of groups array
+      return groups[groupIndex].astronauts[i]['x1']; //for payload specialist, the index is 22
+  })
+    .attr('y1', (d,i) => groups[groupIndex].astronauts[i]['y1'])
+    .attr('x2', (d,i) => groups[groupIndex].astronauts[i]['x2'])
+    .attr('y2', (d,i) => groups[groupIndex].astronauts[i]['y2'])
 
     d3.select('g.is-open')
     .selectAll('circle')
     .transition(smoothTransition())
-    .attr('cx', (d,i) => groups[d.group == 'payload_specialist' ? 23-1 : +d.group-1].astronauts[i]['x2'])
-    .attr('cy', (d,i) => groups[d.group == 'payload_specialist' ? 23-1 : +d.group-1].astronauts[i]['y2'])
+    .attr('cx', (d,i) => groups[groupIndex].astronauts[i]['x2'])
+    .attr('cy', (d,i) => groups[groupIndex].astronauts[i]['y2'])
 
+    //// Revert transformation for astronaut stars indicating those who died during missions
+    // d3.select('g.is-open')
+    // .selectAll('image')
+    //   .attr('x', (d,i) => {console.log(groups[groupIndex].astronauts)
+    //    return groups[groupIndex].astronauts[astronautIndex]['xStar']})
+    //   .attr('y', (d,i) => {
+    //    return groups[groupIndex].astronauts[astronautIndex]['yStar']})
 
     d3.select('.is-open')
     .classed('is-open',false);
